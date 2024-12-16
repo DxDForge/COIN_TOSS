@@ -1,14 +1,12 @@
-import 'dart:math';
+import 'package:coin_toss/controllers/coin_flip_controller.dart';
 import 'package:coin_toss/models/3dcoins.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:confetti/confetti.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:math';
 
-// Import pages
+// Import necessary pages and dependencies
 import 'coin_selection_page.dart';
 import 'difficulty_selection_page.dart';
 import 'settings_page.dart';
@@ -20,96 +18,153 @@ class CoinFlipHomePage extends StatefulWidget {
   _CoinFlipHomePageState createState() => _CoinFlipHomePageState();
 }
 
-class _CoinFlipHomePageState extends State<CoinFlipHomePage>
-    with SingleTickerProviderStateMixin {
-  // Coin Selection
-  CoinType _currentCoin = CoinTypes.getDefaultCoin();
-
-  // Animation and Game State Controllers
-  late AnimationController _flipAnimationController;
-  late Animation<double> _flipAnimation;
+class _CoinFlipHomePageState extends State<CoinFlipHomePage> 
+    with TickerProviderStateMixin {
+  
+  // Controller and State Management
+  late CoinFlipController _controller;
   late ConfettiController _confettiController;
-
-  // Audio and Game State
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  late AnimationController _flipAnimationController;
+  late AnimationController _resultAnimationController;
+  
+  // State Variables
+  CoinType _currentCoin = CoinTypes.getDefaultCoin();
+  Color _currentBackground = const Color(0xFF6A11CB);
+  String _currentPrompt = 'Your Fate Awaits!';
   bool _isFlipping = false;
-  String _currentResult = '?';
-  int _currentStreak = 0;
-  int _totalCoins = 0;
+  bool _showResultOverlay = false;
+  String _currentResult = '';
+  String _resultInterpretation = '';
+  late Animation<double> _resultAnimation;
 
-  // Scenario Management
-  final Map<String, Map<String, dynamic>> _tossScenarios = {
-    'Cricket Toss': {
-      'description': 'Determine who bats or bowls first',
-      'icon': Icons.sports_cricket,
-      'background': Color(0xFF2C5E1A),
-      'details': [
-        'Winner chooses: Bat or Bowl',
-        'Critical decision in match strategy',
-        'Luck plays a crucial role'
-      ]
-    },
-    'Bill Splitter': {
-      'description': 'Decide who pays the restaurant bill',
-      'icon': Icons.restaurant,
-      'background': Color(0xFF4A4A4A),
-      'details': [
-        'Fair way to split expenses',
-        'No hard feelings',
-        'Quick decision maker'
-      ]
-    },
+  // Psychological Engagement Mechanisms
+  final List<String> _dramaticPhrases = [
+    'Destiny unfolds...',
+    'The universe decides...',
+    'Fate is about to speak...',
+    'Cosmic winds are turning...',
+    'Secrets are revealing...',
+  ];
+
+  final Map<String, List<String>> _resultInterpretations = {
+    'Heads': [
+      'Leadership is calling',
+      'Embrace your inner visionary',
+      'Your intuition is spot on',
+      'Opportunities are aligning',
+      'Confidence is your superpower'
+    ],
+    'Tails': [
+      'Reflect and recalibrate',
+      'Hidden wisdom awaits',
+      'Patience is your strength',
+      'Explore alternative paths',
+      'Inner peace is your guide'
+    ]
   };
-
-  String _currentScenario = 'Cricket Toss';
-
-  // Dynamic UI Elements
-  final List<Color> _backgroundGradients = [
-    const Color(0xFF6A11CB),
-    const Color(0xFF2575FC),
-    const Color(0xFFFF5E62),
-    const Color(0xFF42E695),
-    const Color(0xFF3BB78F)
-  ];
-
-  final List<String> _funPrompts = [
-    'Heads for Coffee, Tails for Tea?',
-    'Who Pays the Bill?',
-    'First Pick or Last Pick?',
-    'Adventure or Relaxation?',
-    'Your Fate Awaits!'
-  ];
-
-  late Color _currentBackground;
-  late String _currentPrompt;
 
   @override
   void initState() {
     super.initState();
-    _initializeGame();
-    _loadSelectedCoin();
-  }
+    
+    // Initialize Controllers
+    _controller = CoinFlipController(
+      currentCoin: _currentCoin,
+    );
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 2)
+    );
+    
+    // Initialize Animations
+    _flipAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
 
-   Future<void> _loadSelectedCoin() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedCoinName = prefs.getString('selectedCoin');
+    // Result Reveal Animation
+    _resultAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    _resultAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+        parent: _resultAnimationController,
+        curve: Curves.elasticOut,
+      )
+    );
 
-    if (savedCoinName != null) {
+    // Load Selected Coin
+    _controller.loadSelectedCoin().then((_) {
       setState(() {
-        _currentCoin = CoinTypes.availableCoins.firstWhere(
-          (coin) => coin.name == savedCoinName,
-          orElse: () => CoinTypes.getDefaultCoin()
-        );
+        _currentCoin = _controller.currentCoin;
       });
-    }
+    });
   }
 
+  // Enhanced Dramatic Result Reveal Method
+  void _revealResult(String result) {
+    // Select a random dramatic phrase
+    final dramaticPhrase = _dramaticPhrases[Random().nextInt(_dramaticPhrases.length)];
+    
+    // Select a random interpretation for the result
+    final interpretations = _resultInterpretations[result] ?? [];
+    final interpretation = interpretations.isNotEmpty 
+      ? interpretations[Random().nextInt(interpretations.length)] 
+      : 'Your moment of truth';
+
+    setState(() {
+      _showResultOverlay = true;
+      _currentResult = result;
+      _resultInterpretation = interpretation;
+      _currentBackground = result == 'Heads' 
+        ? const Color(0xFF4A90E2)  // Vibrant blue for Heads
+        : const Color(0xFFE74C3C); // Energetic red for Tails
+    });
+
+    // Trigger result animation
+    _resultAnimationController.forward(from: 0.0);
+
+    // Auto-dismiss result after 3 seconds
+    Future.delayed(const Duration(seconds: 3), () {
+      setState(() {
+        _showResultOverlay = false;
+      });
+    });
+  }
+
+  // Coin Flip Method
+  void _flipCoin() {
+    if (_isFlipping) return;
+
+    setState(() {
+      _isFlipping = true;
+      _showResultOverlay = false;
+    });
+
+    _flipAnimationController.forward(from: 0.0);
+
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      final flipResult = _controller.flipCoin();
+      
+      setState(() {
+        _currentBackground = flipResult.newBackground;
+        _currentPrompt = flipResult.newPrompt;
+        _isFlipping = false;
+      });
+
+      _revealResult(flipResult.result);
+      _confettiController.play();
+    });
+  }
+
+  // Navigation Methods
   void _navigateToCoinSelection() async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => CoinSelectionPage(
           onCoinSelected: (CoinType selectedCoin) {
+            _controller.saveCoinSelection(selectedCoin);
             setState(() {
               _currentCoin = selectedCoin;
             });
@@ -117,165 +172,68 @@ class _CoinFlipHomePageState extends State<CoinFlipHomePage>
         ),
       ),
     );
-
-    if (result != null && result is CoinType) {
-      setState(() {
-        _currentCoin = result;
-      });
-
-      // Save selected coin to SharedPreferences
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('selectedCoin', _currentCoin.name);
-    }
   }
 
-  void _initializeGame() {
-    _initializeAnimations();
-    _preloadSounds();
-    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
-
-    // Set initial dynamic elements
-    _currentPrompt = _funPrompts[Random().nextInt(_funPrompts.length)];
-    _currentBackground = _backgroundGradients[Random().nextInt(_backgroundGradients.length)];
-  }
-
-  void _initializeAnimations() {
-    _flipAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    );
-
-    _flipAnimation = Tween<double>(begin: 0, end: 2 * pi).animate(
-      CurvedAnimation(
-        parent: _flipAnimationController,
-        curve: Curves.easeInOutQuart,
-      ),
-    );
-  }
-
-  void _preloadSounds() async {
-    await _audioPlayer.play(AssetSource('sounds/coin_flip.mp3'));
-    await _audioPlayer.play(AssetSource('sounds/coin_land.mp3'));
-  }
-  void _flipCoin() {
-    if (_isFlipping) return;
-
-    // Enhanced haptic and audio feedback
-    HapticFeedback.heavyImpact();
-    _playSound('assets/sounds/coin_flip.mp3');
-
-    setState(() {
-      _isFlipping = true;
-      _currentResult = '?';
-      // Change background and prompt on each toss
-      _currentBackground = _backgroundGradients[Random().nextInt(_backgroundGradients.length)];
-      _currentPrompt = _funPrompts[Random().nextInt(_funPrompts.length)];
-    });
-
-    _flipAnimationController.forward(from: 0.0);
-
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      final result = Random().nextBool() ? 'Heads' : 'Tails';
-      _playSound('assets/sounds/coin_land.mp3');
-
-      setState(() {
-        _currentResult = result;
-        _isFlipping = false;
-        _totalCoins++; 
-        
-        // Update streak logic
-        _currentStreak = (_currentResult == 'Heads') ? _currentStreak + 1 : 0;
-      });
-
-      // Show result in a more engaging way
-      _showResultDialog(result);
-
-      // Trigger celebration for the result
-      _confettiController.play();
-    });
-  }
-
-  void _showResultDialog(String result) {
+  // Information Dialog
+  void _showInfoDialog() {
     showDialog(
       context: context,
-      barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: Colors.transparent,
-          content: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  result == 'Heads' ? Colors.blue : Colors.red,
-                  result == 'Heads' ? Colors.lightBlue : Colors.redAccent,
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 20),
-                Text(
-                  'You Got',
-                  style: GoogleFonts.orbitron(
-                    fontSize: 24,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  result,
-                  style: GoogleFonts.orbitron(
-                    fontSize: 64,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    shadows: [
-                      Shadow(
-                        blurRadius: 10.0,
-                        color: Colors.black.withOpacity(0.3),
-                        offset: const Offset(3.0, 3.0),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white.withOpacity(0.3),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  child: Text(
-                    'Continue',
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-              ],
+          backgroundColor: Colors.white.withOpacity(0.9),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Text(
+            'Coin Toss Mechanics',
+            style: GoogleFonts.orbitron(
+              fontWeight: FontWeight.bold,
+              color: Colors.deepPurple,
             ),
           ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '🎲 Each flip is a 50/50 chance\n'
+                '🌈 Dynamic backgrounds reflect your luck\n'
+                '🪙 Collect and customize your coins\n'
+                '📊 Track your flip history and streaks',
+                style: GoogleFonts.roboto(
+                  fontSize: 16,
+                  color: Colors.black87,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Tip: The more you flip, the more exciting it gets!',
+                style: GoogleFonts.poppins(
+                  fontStyle: FontStyle.italic,
+                  color: Colors.deepPurple,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: Text(
+                'Got it!', 
+                style: GoogleFonts.poppins(
+                  color: Colors.deepPurple,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
         );
       },
     );
   }
 
-  void _playSound(String path) async {
-    try {
-      await _audioPlayer.play(AssetSource(path));
-    } catch (e) {
-      print('Error playing sound: $e');
-    }
-  }
-
-  // Custom Drawer Method
+  // Build Drawer (Keeping the previous implementation)
   Drawer _buildCustomDrawer() {
     return Drawer(
       backgroundColor: const Color(0xFF16213E),
@@ -317,31 +275,7 @@ class _CoinFlipHomePageState extends State<CoinFlipHomePage>
             ),
           ),
           
-          // Scenario Selection
-          _buildSectionHeader('Scenarios'),
-          ..._tossScenarios.keys.map((scenario) => ListTile(
-            leading: Icon(_tossScenarios[scenario]!['icon'], color: Colors.white),
-            title: Text(
-              scenario,
-              style: GoogleFonts.roboto(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            onTap: () {
-              setState(() {
-                _currentScenario = scenario;
-                _currentResult = '?';
-              });
-              Navigator.pop(context);
-            },
-            tileColor: _currentScenario == scenario
-              ? Colors.white.withOpacity(0.1)
-              : null,
-          )).toList(),
-
-          // Navigation Section
-          _buildSectionHeader('Navigation'),
+          // Navigation Items (keeping previous implementation)
           _buildDrawerNavItem(
             icon: Icons.home,
             title: 'Home',
@@ -373,21 +307,7 @@ class _CoinFlipHomePageState extends State<CoinFlipHomePage>
     );
   }
 
-  // Helper methods for drawer
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Text(
-        title,
-        style: GoogleFonts.roboto(
-          color: Colors.white54,
-          fontWeight: FontWeight.bold,
-          fontSize: 16,
-        ),
-      ),
-    );
-  }
-
+  // Drawer Navigation Item Helper
   Widget _buildDrawerNavItem({
     required IconData icon, 
     required String title, 
@@ -405,236 +325,207 @@ class _CoinFlipHomePageState extends State<CoinFlipHomePage>
       onTap: onTap,
     );
   }
-// UI Building Methods for CoinFlipHomePage
 
-// Animated AppBar
-PreferredSizeWidget _buildAnimatedAppBar() {
-  return AppBar(
-    backgroundColor: Colors.transparent,
-    elevation: 0,
-    title: AnimatedTextKit(
-      animatedTexts: [
-        TypewriterAnimatedText(
-          _currentScenario,
-          textStyle: GoogleFonts.orbitron(
-            color: Colors.white,
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-          ),
-          speed: const Duration(milliseconds: 100),
-        ),
-      ],
-      totalRepeatCount: 1,
-      pause: const Duration(milliseconds: 1000),
-    ),
-    actions: [
-      IconButton(
-        icon: const Icon(Icons.info_outline, color: Colors.white),
-        onPressed: () {
-          // Show scenario details
-          _showScenarioDetails();
-        },
-      ),
-    ],
-  );
-}
-
-// Animated Background
-Widget _buildAnimatedBackground() {
-  return AnimatedContainer(
-    duration: const Duration(milliseconds: 500),
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        colors: [
-          _currentBackground,
-          _currentBackground.withOpacity(0.7),
-        ],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-    ),
-  );
-}
-
-// Dynamic Header
-Widget _buildDynamicHeader() {
-  return Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-    child: Column(
-      children: [
-        Text(
-          _currentPrompt,
-          style: GoogleFonts.poppins(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Total Flips: $_totalCoins | Current Streak: $_currentStreak',
-          style: GoogleFonts.roboto(
-            color: Colors.white70,
-            fontSize: 14,
-          ),
-        ),
-      ],
-    ),
-  );
-}
-// Coin Flip Section
-  Widget _buildCoinFlipSection() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          GestureDetector(
-            onTap: _flipCoin,
-            child: Coin3D(
-              coinType: _currentCoin,
-              size: 250,
-              isSpinning: _isFlipping,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            _currentResult,
-            style: GoogleFonts.orbitron(
-              color: Colors.white,
-              fontSize: 48,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-// Footer Section
-Widget _buildFooterSection() {
-  return Padding(
-    padding: const EdgeInsets.all(16.0),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        // Coin Selection Button
-        ElevatedButton.icon(
-          onPressed: _navigateToCoinSelection,
-          icon: const Icon(Icons.monetization_on, color: Colors.white),
-          label: Text(
-            'Select Coin',
-            style: GoogleFonts.poppins(color: Colors.white),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.white.withOpacity(0.2),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-          ),
-        ),
-        
-        // Scenario Details Button
-        ElevatedButton.icon(
-          onPressed: _showScenarioDetails,
-          icon: const Icon(Icons.description, color: Colors.white),
-          label: Text(
-            'Scenario Details',
-            style: GoogleFonts.poppins(color: Colors.white),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.white.withOpacity(0.2),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-// Show Scenario Details Method
-void _showScenarioDetails() {
-  final scenario = _tossScenarios[_currentScenario];
-  
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        backgroundColor: scenario?['background'] ?? Colors.grey[800],
-        title: Text(
-          _currentScenario,
-          style: GoogleFonts.orbitron(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              scenario?['description'] ?? 'No description available',
-              style: GoogleFonts.roboto(
-                color: Colors.white70,
-              ),
-            ),
-            const SizedBox(height: 10),
-            ...?scenario?['details']?.map((detail) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4.0),
-              child: Row(
-                children: [
-                  const Icon(Icons.check_circle, color: Colors.white, size: 16),
-                  const SizedBox(width: 8),
-                  Text(
-                    detail,
-                    style: GoogleFonts.roboto(
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            )).toList(),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              'Close',
-              style: GoogleFonts.poppins(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      );
-    },
-  );
-}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       extendBodyBehindAppBar: true,
       drawer: _buildCustomDrawer(),
-      appBar: _buildAnimatedAppBar(),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: AnimatedTextKit(
+          animatedTexts: [
+            TypewriterAnimatedText(
+              'Coin Toss',
+              textStyle: GoogleFonts.orbitron(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+              speed: const Duration(milliseconds: 100),
+            ),
+          ],
+          totalRepeatCount: 1,
+          pause: const Duration(milliseconds: 1000),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.info_outline, color: Colors.white),
+            onPressed: _showInfoDialog,
+          ),
+        ],
+      ),
       body: Stack(
         children: [
           // Animated Background
-          _buildAnimatedBackground(),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 500),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  _currentBackground,
+                  _currentBackground.withOpacity(0.7),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
           
           // Main Content
           SafeArea(
             child: Column(
               children: [
-                _buildDynamicHeader(),
-                Expanded(child: _buildCoinFlipSection()),
-                _buildFooterSection(),
+                // Dynamic Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Column(
+                    children: [
+                      Text(
+                        _isFlipping ? 'Spinning...' : _currentPrompt,
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Total Flips: ${_controller.gameState.totalCoins} | Current Streak: ${_controller.gameState.currentStreak}',
+                        style: GoogleFonts.roboto(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Coin Flip Section
+                Expanded(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        GestureDetector(
+                          onTap: _flipCoin,
+                          child: Coin3D(
+                            coinType: _currentCoin,
+                            size: 250,
+                            isSpinning: _isFlipping,
+                            spinIntensity: SpinIntensity.medium,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          _controller.gameState.currentResult,
+                          style: GoogleFonts.orbitron(
+                            color: Colors.white,
+                            fontSize: 48,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Footer Section
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: _navigateToCoinSelection,
+                        icon: const Icon(Icons.monetization_on, color: Colors.white),
+                        label: Text(
+                          'Select Coin',
+                          style: GoogleFonts.poppins(color: Colors.white),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white.withOpacity(0.2),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
+
+
+
+          // Result Overlay
+if (_showResultOverlay)
+            Positioned.fill(
+              child: ScaleTransition(
+                scale: _resultAnimation,
+                child: Container(
+                  color: Colors.black.withOpacity(0.8),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Dramatic Prelude
+                        Text(
+                          'The Moment of Truth',
+                          style: GoogleFonts.orbitron(
+                            color: Colors.white70,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w300,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        
+                        // Animated Result
+                        AnimatedTextKit(
+                          animatedTexts: [
+                            ScaleAnimatedText(
+                              _currentResult,
+                              textStyle: GoogleFonts.orbitron(
+                                color: Colors.white,
+                                fontSize: 72,
+                                fontWeight: FontWeight.bold,
+                                shadows: [
+                                  Shadow(
+                                    blurRadius: 10.0,
+                                    color: Colors.black.withOpacity(0.5),
+                                    offset: const Offset(5.0, 5.0),
+                                  ),
+                                ],
+                              ),
+                              scalingFactor: 0.5,
+                            ),
+                          ],
+                          totalRepeatCount: 1,
+                          pause: const Duration(milliseconds: 500),
+                        ),
+                        
+                        // Inspirational Interpretation
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                          child: Text(
+                            _resultInterpretation,
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
 
           // Confetti Overlay
           Positioned.fill(
@@ -656,243 +547,12 @@ void _showScenarioDetails() {
     );
   }
 
-  // Other UI building methods (AppBar, Header, Coin Flip Section, Footer)
-  // These remain mostly the same as in the previous implementation
-  
   @override
   void dispose() {
+    _controller.dispose();
     _flipAnimationController.dispose();
-    _audioPlayer.dispose();
+    _resultAnimationController.dispose();
     _confettiController.dispose();
     super.dispose();
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import 'package:audioplayers/audioplayers.dart';
-// import 'package:coin_toss/controllers/coin_flip_controller.dart';
-// import 'package:coin_toss/models/3dcoins.dart';
-// import 'package:coin_toss/views/Screens/coin_selection_page.dart';
-// import 'package:flutter/material.dart';
-// import 'package:google_fonts/google_fonts.dart';
-// import 'package:animated_text_kit/animated_text_kit.dart';
-// import 'package:shared_preferences/shared_preferences.dart';
-
-
-// class CoinFlipHomePage extends StatefulWidget {
-//   const CoinFlipHomePage({Key? key}) : super(key: key);
-
-//   @override
-//   _CoinFlipHomePageState createState() => _CoinFlipHomePageState();
-// }
-
-// class _CoinFlipHomePageState extends State<CoinFlipHomePage> 
-//     with SingleTickerProviderStateMixin {
-//   // Controller instance
-//   late CoinFlipController _controller;
-
-//   @override
-//   void initState() {
-//     super.initState();
-//     // Initialize controller with required dependencies
-//     _controller = CoinFlipController(
-//       audioPlayer: AudioPlayer(),
-//       preferences: SharedPreferences.getInstance(),
-//       currentCoin: CoinTypes.getDefaultCoin(),
-//       currentScenario: 'Cricket Toss',
-//       currentBackground: const Color(0xFF6A11CB),
-//       currentPrompt: 'Your Fate Awaits!',
-//     );
-
-//     // Load selected coin
-//     _controller.loadSelectedCoin();
-//   }
-
-//   // Navigation method for coin selection
-//   void _navigateToCoinSelection() async {
-//     final result = await Navigator.push(
-//       context,
-//       MaterialPageRoute(
-//         builder: (context) => CoinSelectionPage(
-//           onCoinSelected: (CoinType selectedCoin) {
-//             setState(() {
-//               _controller.currentCoin = selectedCoin;
-//             });
-//             _controller.saveSelectedCoin(selectedCoin);
-//           },
-//         ),
-//       ),
-//     );
-//   }
-
-//   // Scenario details dialog
-//   void _showScenarioDetails() {
-//     final scenarios = {
-//       'Cricket Toss': {
-//         'description': 'Determine who bats or bowls first',
-//         'icon': Icons.sports_cricket,
-//         'background': const Color(0xFF2C5E1A),
-//         'details': [
-//           'Winner chooses: Bat or Bowl',
-//           'Critical decision in match strategy',
-//           'Luck plays a crucial role'
-//         ]
-//       },
-//       // Add other scenarios here
-//     };
-
-//     final scenario = scenarios[_controller.currentScenario];
-    
-//     showDialog(
-//       context: context,
-//       builder: (BuildContext context) {
-//         return AlertDialog(
-//           backgroundColor: scenario?['background'] ?? Colors.grey[800],
-//           title: Text(
-//             _controller.currentScenario,
-//             style: GoogleFonts.orbitron(
-//               color: Colors.white,
-//               fontWeight: FontWeight.bold,
-//             ),
-//           ),
-//           content: Column(
-//             mainAxisSize: MainAxisSize.min,
-//             crossAxisAlignment: CrossAxisAlignment.start,
-//             children: [
-//               Text(
-//                 scenario?['description'] ?? 'No description available',
-//                 style: GoogleFonts.roboto(
-//                   color: Colors.white70,
-//                 ),
-//               ),
-//               const SizedBox(height: 10),
-//               ...?scenario?['details']?.map((detail) => Padding(
-//                 padding: const EdgeInsets.symmetric(vertical: 4.0),
-//                 child: Row(
-//                   children: [
-//                     const Icon(Icons.check_circle, color: Colors.white, size: 16),
-//                     const SizedBox(width: 8),
-//                     Text(
-//                       detail,
-//                       style: GoogleFonts.roboto(
-//                         color: Colors.white,
-//                       ),
-//                     ),
-//                   ],
-//                 ),
-//               )).toList(),
-//             ],
-//           ),
-//           actions: [
-//             TextButton(
-//               onPressed: () => Navigator.of(context).pop(),
-//               child: Text(
-//                 'Close',
-//                 style: GoogleFonts.poppins(
-//                   color: Colors.white,
-//                   fontWeight: FontWeight.bold,
-//                 ),
-//               ),
-//             ),
-//           ],
-//         );
-//       },
-//     );
-//   }
-
-//   // Animated AppBar
-//   PreferredSizeWidget _buildAnimatedAppBar() {
-//     return AppBar(
-//       backgroundColor: Colors.transparent,
-//       elevation: 0,
-//       title: AnimatedTextKit(
-//         animatedTexts: [
-//           TypewriterAnimatedText(
-//             _controller.currentScenario,
-//             textStyle: GoogleFonts.orbitron(
-//               color: Colors.white,
-//               fontSize: 22,
-//               fontWeight: FontWeight.bold,
-//             ),
-//             speed: const Duration(milliseconds: 100),
-//           ),
-//         ],
-//         totalRepeatCount: 1,
-//         pause: const Duration(milliseconds: 1000),
-//       ),
-//       actions: [
-//         IconButton(
-//           icon: const Icon(Icons.info_outline, color: Colors.white),
-//           onPressed: _showScenarioDetails,
-//         ),
-//       ],
-//     );
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       extendBodyBehindAppBar: true,
-//       drawer: CustomDrawer(
-//         onCoinSelection: _navigateToCoinSelection,
-//         onDifficultyGame: () => Navigator.push(
-//           context,
-//           MaterialPageRoute(builder: (context) => DifficultyProgressScreen()),
-//         ),
-//         onSettings: () => Navigator.push(
-//           context,
-//           MaterialPageRoute(builder: (context) => SettingsPage()),
-//         ),
-//       ),
-//       appBar: _buildAnimatedAppBar(),
-//       body: Stack(
-//         children: [
-//           AnimatedBackground(backgroundColor: _controller.currentBackground),
-//           SafeArea(
-//             child: Column(
-//               children: [
-//                 DynamicHeader(
-//                   prompt: _controller.currentPrompt,
-//                   totalCoins: _controller.totalCoins,
-//                   currentStreak: _controller.currentStreak,
-//                 ),
-//                 Expanded(
-//                   child: CoinFlipSection(
-//                     currentCoin: _controller.currentCoin,
-//                     isFlipping: _controller.isFlipping,
-//                     currentResult: _controller.currentResult,
-//                     onFlip: () => setState(_controller.flipCoin),
-//                   ),
-//                 ),
-//                 FooterSection(
-//                   onCoinSelect: _navigateToCoinSelection,
-//                   onScenarioDetails: _showScenarioDetails,
-//                 ),
-//               ],
-//             ),
-//           ),
-//           ConfettiOverlay(),
-//         ],
-//       ),
-//     );
-//   }
-
-//   @override
-//   void dispose() {
-//     _controller.audioPlayer.dispose();
-//     super.dispose();
-//   }
-// }

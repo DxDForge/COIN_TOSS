@@ -1,37 +1,47 @@
-// controllers/coin_flip_controller.dart
 import 'dart:math';
 import 'package:coin_toss/models/3dcoins.dart';
+import 'package:coin_toss/models/coin_flip_model.dart';
+
 import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 
 class CoinFlipController {
-  // Game State
-  CoinType currentCoin;
-  bool isFlipping = false;
-  String currentResult = '?';
-  int currentStreak = 0;
-  int totalCoins = 0;
-  String currentScenario;
-  Color currentBackground;
-  String currentPrompt;
-
-  // Dependencies
   final AudioPlayer audioPlayer;
-  final SharedPreferences preferences;
+  CoinType currentCoin;
+  CoinFlipGameState gameState;
+  final List<String> funPrompts;
+  final List<Color> backgroundGradients;
 
   CoinFlipController({
-    required this.audioPlayer,
-    required this.preferences,
+    AudioPlayer? audioPlayer,
     required this.currentCoin,
-    required this.currentScenario,
-    required this.currentBackground,
-    required this.currentPrompt,
-  });
+    CoinFlipGameState? gameState,
+    List<String>? funPrompts,
+    List<Color>? backgroundGradients,
+  }) : 
+    audioPlayer = audioPlayer ?? AudioPlayer(),
+    gameState = gameState ?? CoinFlipGameState(),
+    funPrompts = funPrompts ?? [
+      'Heads for Coffee, Tails for Tea?',
+      'Who Pays the Bill?',
+      'First Pick or Last Pick?',
+      'Adventure or Relaxation?',
+      'Your Fate Awaits!'
+    ],
+    backgroundGradients = backgroundGradients ?? [
+      const Color(0xFF6A11CB),
+      const Color(0xFF2575FC),
+      const Color(0xFFFF5E62),
+      const Color(0xFF42E695),
+      const Color(0xFF3BB78F)
+    ];
 
-  Future<void> loadSelectedCoin() async {
-    final savedCoinName = preferences.getString('selectedCoin');
+Future<void> loadSelectedCoin() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedCoinName = prefs.getString('selectedCoin');
+
     if (savedCoinName != null) {
       currentCoin = CoinTypes.availableCoins.firstWhere(
         (coin) => coin.name == savedCoinName,
@@ -40,35 +50,10 @@ class CoinFlipController {
     }
   }
 
-  Future<void> saveSelectedCoin(CoinType coin) async {
-    await preferences.setString('selectedCoin', coin.name);
-  }
-
-  void flipCoin() {
-    if (isFlipping) return;
-
-    HapticFeedback.heavyImpact();
-    playSound('assets/sounds/coin_flip.mp3');
-
-    isFlipping = true;
-    currentResult = '?';
-    
-    // Randomize background and prompt
-    currentBackground = _getRandomBackground();
-    currentPrompt = _getRandomPrompt();
-
-    // Simulate coin flip
-    Future.delayed(Duration(milliseconds: 1500), () {
-      final result = Random().nextBool() ? 'Heads' : 'Tails';
-      playSound('assets/sounds/coin_land.mp3');
-
-      currentResult = result;
-      isFlipping = false;
-      totalCoins++;
-      
-      // Update streak logic
-      currentStreak = (currentResult == 'Heads') ? currentStreak + 1 : 0;
-    });
+  Future<void> saveCoinSelection(CoinType coin) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('selectedCoin', coin.name);
+    currentCoin = coin;
   }
 
   void playSound(String path) async {
@@ -79,28 +64,43 @@ class CoinFlipController {
     }
   }
 
-  // Helper methods for randomization
-  Color _getRandomBackground() {
-    final backgroundGradients = [
-      const Color(0xFF6A11CB),
-      const Color(0xFF2575FC),
-      const Color(0xFF0F3460)
-    ];
-    return backgroundGradients[Random().nextInt(backgroundGradients.length)];
+  CoinFlipResult flipCoin() {
+    // Enhanced haptic feedback
+    HapticFeedback.heavyImpact();
+    playSound('assets/sounds/coin_flip.mp3');
+
+    // Randomize result
+    final result = Random().nextBool() ? 'Heads' : 'Tails';
+    
+    // Update game state
+    gameState = gameState.copyWith(
+      totalCoins: gameState.totalCoins + 1,
+      currentStreak: result == 'Heads' ? gameState.currentStreak + 1 : 0,
+      currentResult: result
+    );
+
+    playSound('assets/sounds/coin_land.mp3');
+
+    return CoinFlipResult(
+      result: result,
+      newBackground: backgroundGradients[Random().nextInt(backgroundGradients.length)],
+      newPrompt: funPrompts[Random().nextInt(funPrompts.length)]
+    );
   }
 
-  String _getRandomPrompt() {
-    final funPrompts = [
-      'Heads for Coffee, Tails for Tea?',
-      'Who Pays the Bill?',
-      'First Pick or Last Pick?'
-    ];
-    return funPrompts[Random().nextInt(funPrompts.length)];
+  void dispose() {
+    audioPlayer.dispose();
   }
+}
 
-  // Scenario management
-  void changeScenario(String scenario) {
-    currentScenario = scenario;
-    currentResult = '?';
-  }
+class CoinFlipResult {
+  final String result;
+  final Color newBackground;
+  final String newPrompt;
+
+  CoinFlipResult({
+    required this.result,
+    required this.newBackground,
+    required this.newPrompt
+  });
 }
