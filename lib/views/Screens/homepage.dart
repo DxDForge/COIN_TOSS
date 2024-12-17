@@ -1,5 +1,6 @@
 import 'package:coin_toss/controllers/coin_flip_controller.dart';
 import 'package:coin_toss/models/3dcoins.dart';
+import 'package:coin_toss/models/Scenario.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:confetti/confetti.dart';
@@ -18,15 +19,14 @@ class CoinFlipHomePage extends StatefulWidget {
   _CoinFlipHomePageState createState() => _CoinFlipHomePageState();
 }
 
-class _CoinFlipHomePageState extends State<CoinFlipHomePage> 
+class _CoinFlipHomePageState extends State<CoinFlipHomePage>
     with TickerProviderStateMixin {
-  
   // Controller and State Management
   late CoinFlipController _controller;
   late ConfettiController _confettiController;
   late AnimationController _flipAnimationController;
   late AnimationController _resultAnimationController;
-  
+
   // State Variables
   CoinType _currentCoin = CoinTypes.getDefaultCoin();
   Color _currentBackground = const Color(0xFF6A11CB);
@@ -66,15 +66,14 @@ class _CoinFlipHomePageState extends State<CoinFlipHomePage>
   @override
   void initState() {
     super.initState();
-    
+
     // Initialize Controllers
     _controller = CoinFlipController(
       currentCoin: _currentCoin,
     );
-    _confettiController = ConfettiController(
-      duration: const Duration(seconds: 2)
-    );
-    
+    _confettiController =
+        ConfettiController(duration: const Duration(seconds: 2));
+
     // Initialize Animations
     _flipAnimationController = AnimationController(
       duration: const Duration(milliseconds: 1500),
@@ -86,12 +85,10 @@ class _CoinFlipHomePageState extends State<CoinFlipHomePage>
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
-    _resultAnimation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _resultAnimationController,
-        curve: Curves.elasticOut,
-      )
-    );
+    _resultAnimation = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(
+      parent: _resultAnimationController,
+      curve: Curves.elasticOut,
+    ));
 
     // Load Selected Coin
     _controller.loadSelectedCoin().then((_) {
@@ -104,21 +101,22 @@ class _CoinFlipHomePageState extends State<CoinFlipHomePage>
   // Enhanced Dramatic Result Reveal Method
   void _revealResult(String result) {
     // Select a random dramatic phrase
-    final dramaticPhrase = _dramaticPhrases[Random().nextInt(_dramaticPhrases.length)];
-    
+    final dramaticPhrase =
+        _dramaticPhrases[Random().nextInt(_dramaticPhrases.length)];
+
     // Select a random interpretation for the result
     final interpretations = _resultInterpretations[result] ?? [];
-    final interpretation = interpretations.isNotEmpty 
-      ? interpretations[Random().nextInt(interpretations.length)] 
-      : 'Your moment of truth';
+    final interpretation = interpretations.isNotEmpty
+        ? interpretations[Random().nextInt(interpretations.length)]
+        : 'Your moment of truth';
 
     setState(() {
       _showResultOverlay = true;
       _currentResult = result;
       _resultInterpretation = interpretation;
-      _currentBackground = result == 'Heads' 
-        ? const Color(0xFF4A90E2)  // Vibrant blue for Heads
-        : const Color(0xFFE74C3C); // Energetic red for Tails
+      _currentBackground = result == 'Heads'
+          ? const Color(0xFF4A90E2) // Vibrant blue for Heads
+          : const Color(0xFFE74C3C); // Energetic red for Tails
     });
 
     // Trigger result animation
@@ -145,7 +143,7 @@ class _CoinFlipHomePageState extends State<CoinFlipHomePage>
 
     Future.delayed(const Duration(milliseconds: 1500), () {
       final flipResult = _controller.flipCoin();
-      
+
       setState(() {
         _currentBackground = flipResult.newBackground;
         _currentPrompt = flipResult.newPrompt;
@@ -219,7 +217,7 @@ class _CoinFlipHomePageState extends State<CoinFlipHomePage>
           actions: [
             TextButton(
               child: Text(
-                'Got it!', 
+                'Got it!',
                 style: GoogleFonts.poppins(
                   color: Colors.deepPurple,
                   fontWeight: FontWeight.bold,
@@ -274,7 +272,7 @@ class _CoinFlipHomePageState extends State<CoinFlipHomePage>
               ],
             ),
           ),
-          
+
           // Navigation Items (keeping previous implementation)
           _buildDrawerNavItem(
             icon: Icons.home,
@@ -291,7 +289,8 @@ class _CoinFlipHomePageState extends State<CoinFlipHomePage>
             title: 'Coin Toss Game',
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => DifficultyProgressScreen()),
+              MaterialPageRoute(
+                  builder: (context) => DifficultyProgressScreen()),
             ),
           ),
           _buildDrawerNavItem(
@@ -308,11 +307,10 @@ class _CoinFlipHomePageState extends State<CoinFlipHomePage>
   }
 
   // Drawer Navigation Item Helper
-  Widget _buildDrawerNavItem({
-    required IconData icon, 
-    required String title, 
-    required VoidCallback onTap
-  }) {
+  Widget _buildDrawerNavItem(
+      {required IconData icon,
+      required String title,
+      required VoidCallback onTap}) {
     return ListTile(
       leading: Icon(icon, color: Colors.white),
       title: Text(
@@ -372,14 +370,15 @@ class _CoinFlipHomePageState extends State<CoinFlipHomePage>
               ),
             ),
           ),
-          
+
           // Main Content
           SafeArea(
             child: Column(
               children: [
                 // Dynamic Header
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Column(
                     children: [
                       Text(
@@ -440,11 +439,117 @@ class _CoinFlipHomePageState extends State<CoinFlipHomePage>
                     children: [
                       ElevatedButton.icon(
                         onPressed: _navigateToCoinSelection,
-                        icon: const Icon(Icons.monetization_on, color: Colors.white),
+                        icon: const Icon(Icons.monetization_on,
+                            color: Colors.white),
                         label: Text(
                           'Select Coin',
                           style: GoogleFonts.poppins(color: Colors.white),
                         ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white.withOpacity(0.2),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                      ),
+// In the existing CoinFlipHomePage, modify the Scenarios button onPressed method:
+
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          // Get the list of scenarios
+                          final scenarios = ScenarioList.getScenarios();
+
+                          // Show a scenario selection dialog with improved design
+                          final selectedScenario = await showDialog<Scenario>(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                title: Text('Choose a Scenario',
+                                    style: GoogleFonts.orbitron(
+                                        fontWeight: FontWeight.bold)),
+                                content: SingleChildScrollView(
+                                  child: Column(
+                                    children: scenarios
+                                        .map((scenario) => Card(
+                                              elevation: 4,
+                                              margin:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 8),
+                                              color: scenario.color
+                                                  .withOpacity(0.1),
+                                              child: ListTile(
+                                                leading: Icon(scenario.icon,
+                                                    color: scenario.color),
+                                                title: Text(scenario.title,
+                                                    style: GoogleFonts.roboto(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: scenario.color)),
+                                                subtitle: Text(
+                                                    scenario.description,
+                                                    style: GoogleFonts.roboto(
+                                                        fontSize: 12)),
+                                                onTap: () =>
+                                                    Navigator.of(context)
+                                                        .pop(scenario),
+                                              ),
+                                            ))
+                                        .toList(),
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+
+                          // If a scenario is selected, proceed to its details
+                          if (selectedScenario != null) {
+                            final scenarioResult = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ScenarioDetailPage(
+                                    scenario: selectedScenario),
+                              ),
+                            );
+
+                            // Check if a scenario was selected and details were returned
+                            if (scenarioResult != null) {
+                              // Destructure the returned scenario details
+                              final scenario =
+                                  scenarioResult['scenario'] as Scenario;
+                              final player1 =
+                                  scenarioResult['player1'] as String;
+                              final player1Side =
+                                  scenarioResult['player1Side'] as String;
+                              final player2 =
+                                  scenarioResult['player2'] as String;
+                              final player2Side =
+                                  scenarioResult['player2Side'] as String;
+
+                              // Set the scenario in the controller
+                              _controller.setScenario(scenario, player1,
+                                  player1Side, player2, player2Side);
+
+                              // Add a slight delay before performing the coin flip
+                              await Future.delayed(const Duration(seconds: 2));
+
+                              // Perform the scenario coin flip
+                              final flipResult =
+                                  _controller.flipCoin(isScenarioMode: true);
+
+                              setState(() {
+                                _currentBackground = flipResult.newBackground;
+                                _currentPrompt = flipResult.newPrompt;
+                              });
+
+                              _revealResult(flipResult.result);
+                              _confettiController.play();
+                            }
+                          }
+                        },
+                        icon: const Icon(Icons.sports_esports,
+                            color: Colors.white),
+                        label: Text('Scenarios',
+                            style: GoogleFonts.poppins(color: Colors.white)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white.withOpacity(0.2),
                           shape: RoundedRectangleBorder(
@@ -459,10 +564,8 @@ class _CoinFlipHomePageState extends State<CoinFlipHomePage>
             ),
           ),
 
-
-
           // Result Overlay
-if (_showResultOverlay)
+          if (_showResultOverlay)
             Positioned.fill(
               child: ScaleTransition(
                 scale: _resultAnimation,
@@ -482,7 +585,7 @@ if (_showResultOverlay)
                           ),
                         ),
                         const SizedBox(height: 20),
-                        
+
                         // Animated Result
                         AnimatedTextKit(
                           animatedTexts: [
@@ -506,10 +609,11 @@ if (_showResultOverlay)
                           totalRepeatCount: 1,
                           pause: const Duration(milliseconds: 500),
                         ),
-                        
+
                         // Inspirational Interpretation
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 10),
                           child: Text(
                             _resultInterpretation,
                             textAlign: TextAlign.center,

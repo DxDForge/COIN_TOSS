@@ -1,4 +1,4 @@
-import 'package:coin_toss/controllers/coin_state_controller.dart';
+import 'package:coin_toss/controllers/coin_slection_state_controller.dart';
 import 'package:coin_toss/views/Screens/coin_selection_page.dart';
 import 'package:coin_toss/views/Screens/difficulty_selection_page.dart';
 import 'package:coin_toss/views/Screens/homepage.dart';

@@ -7,39 +7,106 @@ class GameController {
   final String difficulty;
   final int totalQuestions;
 
-  GameModel get currentModel => model;
+    // New engagement tracking variables
+  int _consecutiveChallenges = 0;
+  int _flowStateMultiplier = 1;
+  DateTime? _lastSuccessTimestamp;
 
-  GameController({
-    required this.difficulty,
-    this.totalQuestions = 10,
-  }) : model = GameModel();
+  GameModel get currentModel => model;
 
   static final List<String> motivationalQuotes = [
     "Challenge accepted! 💪",
     "Every problem solved makes you stronger. 🧠",
     "Keep pushing your limits! 🚀",
     "Learning is a journey, enjoy the ride! 🌟",
-    "You're becoming a math wizard! ✨"
+    "You're becoming a math wizard! ✨",
+    // New, more dynamic quotes
+    "Your brain is getting a serious workout! 💡",
+    "Math muscles growing stronger! 💪",
+    "Genius mode: Activated! 🚀",
+    "Breaking mental barriers! 🌈"
   ];
+
+  // Dynamic bonus quote system
+  static final List<String> bonusQuotes = [
+    "Combo Breaker! 🔥",
+    "Unstoppable Streak! 🌟",
+    "Mind-Blowing Precision! ✨",
+    "Lightning-Fast Thinking! ⚡",
+    "Calculation Maestro! 🏆"
+  ];
+
+  GameController({
+    required this.difficulty,
+    this.totalQuestions = 10,
+  }) : model = GameModel();
+
+
+
 
   Map<String, dynamic> get difficultyConfig => 
     DifficultyConfig.config[difficulty] ?? DifficultyConfig.config['Easy']!;
 
+  void _breakFlowState() {
+    _flowStateMultiplier = 1;
+    _consecutiveChallenges = 0;
+    model.explanationText = getRandomMotivationalQuote();
+  }
+
+  // Enhanced question generation with psychological engagement
   MathQuestion generateQuestion() {
+    _adjustDynamicDifficulty();
+    
     int complexity = difficultyConfig['complexity'];
     int range = difficultyConfig['questionRange'];
     List<String> operators = difficultyConfig['operators'];
 
+    MathQuestion question;
     switch (complexity) {
       case 1:
-        return _generateSimpleQuestion(operators, range);
+        question = _generateSimpleQuestion(operators, range);
+        break;
       case 2:
-        return _generateMediumQuestion(operators, range);
+        question = _generateMediumQuestion(operators, range);
+        break;
       case 3:
-        return _generateHardQuestion(operators, range);
+        question = _generateHardQuestion(operators, range);
+        break;
       default:
-        return _generateSimpleQuestion(operators, range);
+        question = _generateSimpleQuestion(operators, range);
     }
+
+    // Add psychological challenge elements
+    question.timeLimit = _calculateTimeLimit(question);
+    question.pointMultiplier = _calculatePointMultiplier();
+
+    return question;
+  }
+
+  void _adjustDynamicDifficulty() {
+    // Dynamically adjust difficulty based on player performance
+    if (model.consecutiveCorrect > 5) {
+      _flowStateMultiplier++;
+      _consecutiveChallenges++;
+    }
+
+    // Reset flow state if performance drops
+    if (model.consecutiveCorrect == 0) {
+      _flowStateMultiplier = 1;
+      _consecutiveChallenges = 0;
+    }
+  }
+
+  int _calculateTimeLimit(MathQuestion question) {
+    // Shorter time for more complex questions, with flow state consideration
+    int baseTimeLimit = 15;
+    int complexityReduction = question.question.split(' ').length * 2;
+    return max(5, baseTimeLimit - complexityReduction + _flowStateMultiplier);
+  }
+
+  double _calculatePointMultiplier() {
+    // Progressive point multiplier based on consecutive challenges
+    return 1 + (_consecutiveChallenges * 0.1);
   }
 
   MathQuestion _generateSimpleQuestion(List<String> operators, int range) {
@@ -163,12 +230,36 @@ class GameController {
     return optionsSet.toList()..shuffle();
   }
 
-  void evaluateAnswer(int selectedAnswer, int correctAnswer, int timeLeft) {
-    if (selectedAnswer == correctAnswer) {
+void evaluateAnswer(int selectedAnswer, int correctAnswer, int timeLeft) {
+    bool isCorrect = selectedAnswer == correctAnswer;
+    
+    if (isCorrect) {
       _handleCorrectAnswer(timeLeft);
+      _updateFlowState();
     } else {
       _handleWrongAnswer();
+      _breakFlowState();
     }
+  }
+
+  void _updateFlowState() {
+    DateTime now = DateTime.now();
+    if (_lastSuccessTimestamp != null) {
+      Duration timeBetweenAnswers = now.difference(_lastSuccessTimestamp!);
+      
+      // Reward quick, accurate responses
+      if (timeBetweenAnswers.inSeconds < 3) {
+        model.score += 5; // Bonus for rapid problem-solving
+        model.explanationText = _getRandomBonusQuote();
+      }
+    }
+    _lastSuccessTimestamp = now;
+  }
+
+
+
+  String _getRandomBonusQuote() {
+    return bonusQuotes[Random().nextInt(bonusQuotes.length)];
   }
 
   void _handleCorrectAnswer(int timeLeft) {
@@ -204,14 +295,19 @@ class GameController {
   }
 }
 
+// Enhanced MathQuestion to support new psychological mechanics
 class MathQuestion {
   final String question;
   final List<int> options;
   final int correctAnswer;
+  int timeLimit;
+  double pointMultiplier;
 
   MathQuestion({
     required this.question,
     required this.options,
     required this.correctAnswer,
+    this.timeLimit = 15,
+    this.pointMultiplier = 1.0,
   });
 }

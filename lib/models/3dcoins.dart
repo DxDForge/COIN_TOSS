@@ -10,34 +10,6 @@ enum CoinMaterial {
   custom,
 }
 
-class CoinType {
-  final String name;
-  final CoinMaterial material;
-  final Color primaryColor;
-  final Color secondaryColor;
-  final String symbol;
-  final String countryOfOrigin;
-  final List<Color> reflectionGradient;
-  final CoinRotationStyle rotationStyle;
-  final CoinDesignStyle designStyle;
-
-  const CoinType({
-    required this.name,
-    this.material = CoinMaterial.silver,
-    required this.primaryColor,
-    required this.secondaryColor,
-    required this.symbol,
-    this.countryOfOrigin = 'Blockchain Realm',
-    this.reflectionGradient = const [
-      Color(0xFFE0E0E0),
-      Color(0xFFF5F5F5),
-      Color(0xFFBDBDBD),
-    ],
-    this.rotationStyle = CoinRotationStyle.standard,
-    this.designStyle = CoinDesignStyle.classic,
-  });
-}
-
 enum CoinRotationStyle {
   standard,
   diagonal,
@@ -54,6 +26,45 @@ enum CoinDesignStyle {
   ancient,
   minimalist,
   ornate,
+}
+
+enum SpinIntensity {
+  slow,
+  medium,
+  fast,
+}
+
+class CoinType {
+  final String name;
+  final CoinMaterial material;
+  final Color primaryColor;
+  final Color secondaryColor;
+  final Color tailPrimaryColor;
+  final Color tailSecondaryColor;
+  final String symbol;
+  final String countryOfOrigin;
+  final List<Color> reflectionGradient;
+  final CoinRotationStyle rotationStyle;
+  final CoinDesignStyle designStyle;
+
+   CoinType({
+    required this.name,
+    this.material = CoinMaterial.silver,
+    required this.primaryColor,
+    required this.secondaryColor,
+    Color? tailPrimaryColor,
+    Color? tailSecondaryColor,
+    required this.symbol,
+    this.countryOfOrigin = 'Blockchain Realm',
+    this.reflectionGradient = const [
+      Color(0xFFE0E0E0),
+      Color(0xFFF5F5F5),
+      Color(0xFFBDBDBD),
+    ],
+    this.rotationStyle = CoinRotationStyle.standard,
+    this.designStyle = CoinDesignStyle.classic,
+  }) : tailPrimaryColor = tailPrimaryColor ?? primaryColor.withOpacity(0.7),
+       tailSecondaryColor = tailSecondaryColor ?? secondaryColor.withOpacity(0.7);
 }
 
 class Coin3D extends StatefulWidget {
@@ -76,12 +87,6 @@ class Coin3D extends StatefulWidget {
 
   @override
   _Coin3DState createState() => _Coin3DState();
-}
-
-enum SpinIntensity {
-  slow,
-  medium,
-  fast,
 }
 
 class _Coin3DState extends State<Coin3D> with SingleTickerProviderStateMixin {
@@ -108,116 +113,53 @@ class _Coin3DState extends State<Coin3D> with SingleTickerProviderStateMixin {
       ),
     );
 
-    // Unique rotation styles
+    _specialRotationAnimation = _createSpecialRotationAnimation();
+  }
+
+  Animation<Offset> _createSpecialRotationAnimation() {
     switch (widget.coinType.rotationStyle) {
       case CoinRotationStyle.standard:
-        _specialRotationAnimation = AlwaysStoppedAnimation(Offset.zero);
-        break;
+        return AlwaysStoppedAnimation(Offset.zero);
       case CoinRotationStyle.diagonal:
-        _specialRotationAnimation = TweenSequence<Offset>([
-          TweenSequenceItem(
-            tween: Tween(begin: Offset.zero, end: Offset(0.1, 0.1)),
-            weight: 1,
-          ),
-          TweenSequenceItem(
-            tween: Tween(begin: Offset(0.1, 0.1), end: Offset(-0.1, -0.1)),
-            weight: 1,
-          ),
-          TweenSequenceItem(
-            tween: Tween(begin: Offset(-0.1, -0.1), end: Offset.zero),
-            weight: 1,
-          ),
+        return TweenSequence<Offset>([
+          TweenSequenceItem(tween: Tween(begin: Offset.zero, end: Offset(0.1, 0.1)), weight: 1),
+          TweenSequenceItem(tween: Tween(begin: Offset(0.1, 0.1), end: Offset(-0.1, -0.1)), weight: 1),
+          TweenSequenceItem(tween: Tween(begin: Offset(-0.1, -0.1), end: Offset.zero), weight: 1),
         ]).animate(
-          CurvedAnimation(
-            parent: _controller,
-            curve: Curves.easeInOut,
-          ),
+          CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
         );
-        break;
       case CoinRotationStyle.verticalWave:
-        _specialRotationAnimation = TweenSequence<Offset>([
-          TweenSequenceItem(
-            tween: Tween(begin: Offset.zero, end: Offset(0, 0.2)),
-            weight: 1,
-          ),
-          TweenSequenceItem(
-            tween: Tween(begin: Offset(0, 0.2), end: Offset(0, -0.2)),
-            weight: 1,
-          ),
-          TweenSequenceItem(
-            tween: Tween(begin: Offset(0, -0.2), end: Offset.zero),
-            weight: 1,
-          ),
+        return TweenSequence<Offset>([
+          TweenSequenceItem(tween: Tween(begin: Offset.zero, end: Offset(0, 0.2)), weight: 1),
+          TweenSequenceItem(tween: Tween(begin: Offset(0, 0.2), end: Offset(0, -0.2)), weight: 1),
+          TweenSequenceItem(tween: Tween(begin: Offset(0, -0.2), end: Offset.zero), weight: 1),
         ]).animate(
-          CurvedAnimation(
-            parent: _controller,
-            curve: Curves.easeInOut,
-          ),
+          CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
         );
-        break;
       case CoinRotationStyle.horizontalWave:
-        _specialRotationAnimation = TweenSequence<Offset>([
-          TweenSequenceItem(
-            tween: Tween(begin: Offset.zero, end: Offset(0.2, 0)),
-            weight: 1,
-          ),
-          TweenSequenceItem(
-            tween: Tween(begin: Offset(0.2, 0), end: Offset(-0.2, 0)),
-            weight: 1,
-          ),
-          TweenSequenceItem(
-            tween: Tween(begin: Offset(-0.2, 0), end: Offset.zero),
-            weight: 1,
-          ),
+        return TweenSequence<Offset>([
+          TweenSequenceItem(tween: Tween(begin: Offset.zero, end: Offset(0.2, 0)), weight: 1),
+          TweenSequenceItem(tween: Tween(begin: Offset(0.2, 0), end: Offset(-0.2, 0)), weight: 1),
+          TweenSequenceItem(tween: Tween(begin: Offset(-0.2, 0), end: Offset.zero), weight: 1),
         ]).animate(
-          CurvedAnimation(
-            parent: _controller,
-            curve: Curves.easeInOut,
-          ),
+          CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
         );
-        break;
       case CoinRotationStyle.elliptical:
-        _specialRotationAnimation = TweenSequence<Offset>([
-          TweenSequenceItem(
-            tween: Tween(begin: Offset.zero, end: Offset(0.1, 0.05)),
-            weight: 1,
-          ),
-          TweenSequenceItem(
-            tween: Tween(begin: Offset(0.1, 0.05), end: Offset(-0.1, -0.05)),
-            weight: 1,
-          ),
-          TweenSequenceItem(
-            tween: Tween(begin: Offset(-0.1, -0.05), end: Offset.zero),
-            weight: 1,
-          ),
+        return TweenSequence<Offset>([
+          TweenSequenceItem(tween: Tween(begin: Offset.zero, end: Offset(0.1, 0.05)), weight: 1),
+          TweenSequenceItem(tween: Tween(begin: Offset(0.1, 0.05), end: Offset(-0.1, -0.05)), weight: 1),
+          TweenSequenceItem(tween: Tween(begin: Offset(-0.1, -0.05), end: Offset.zero), weight: 1),
         ]).animate(
-          CurvedAnimation(
-            parent: _controller,
-            curve: Curves.easeInOut,
-          ),
+          CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
         );
-        break;
       case CoinRotationStyle.zigzag:
-        _specialRotationAnimation = TweenSequence<Offset>([
-          TweenSequenceItem(
-            tween: Tween(begin: Offset.zero, end: Offset(0.15, 0.1)),
-            weight: 1,
-          ),
-          TweenSequenceItem(
-            tween: Tween(begin: Offset(0.15, 0.1), end: Offset(-0.15, -0.1)),
-            weight: 1,
-          ),
-          TweenSequenceItem(
-            tween: Tween(begin: Offset(-0.15, -0.1), end: Offset.zero),
-            weight: 1,
-          ),
+        return TweenSequence<Offset>([
+          TweenSequenceItem(tween: Tween(begin: Offset.zero, end: Offset(0.15, 0.1)), weight: 1),
+          TweenSequenceItem(tween: Tween(begin: Offset(0.15, 0.1), end: Offset(-0.15, -0.1)), weight: 1),
+          TweenSequenceItem(tween: Tween(begin: Offset(-0.15, -0.1), end: Offset.zero), weight: 1),
         ]).animate(
-          CurvedAnimation(
-            parent: _controller,
-            curve: Curves.easeInOut,
-          ),
+          CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
         );
-        break;
     }
   }
 
@@ -232,13 +174,28 @@ class _Coin3DState extends State<Coin3D> with SingleTickerProviderStateMixin {
     }
   }
 
+  RadialGradient _createCoinGradient(bool isTail) {
+    Color primaryColor = isTail ? widget.coinType.tailPrimaryColor : widget.coinType.primaryColor;
+    Color secondaryColor = isTail ? widget.coinType.tailSecondaryColor : widget.coinType.secondaryColor;
+
+    return RadialGradient(
+      colors: [
+        primaryColor,
+        secondaryColor,
+        isTail ? Colors.white.withOpacity(0.4) : Colors.black.withOpacity(0.6),
+      ],
+      radius: 1.5,
+      center: const Alignment(-0.4, -0.4),
+    );
+  }
+
   Widget _buildCoinSurface(bool isTail) {
     return Container(
       width: widget.size,
       height: widget.size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: _getGradientByDesignStyle(),
+        gradient: _createCoinGradient(isTail),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.5),
@@ -252,74 +209,6 @@ class _Coin3DState extends State<Coin3D> with SingleTickerProviderStateMixin {
         child: isTail ? _buildReverseSide() : _buildObverseSide(),
       ),
     );
-  }
-
-  RadialGradient _getGradientByDesignStyle() {
-    switch (widget.coinType.designStyle) {
-      case CoinDesignStyle.classic:
-        return RadialGradient(
-          colors: [
-            widget.coinType.primaryColor,
-            widget.coinType.secondaryColor,
-            Colors.black.withOpacity(0.6),
-          ],
-          radius: 1.5,
-          center: const Alignment(-0.4, -0.4),
-        );
-      case CoinDesignStyle.modern:
-        return RadialGradient(
-          colors: [
-            widget.coinType.primaryColor.withOpacity(0.8),
-            widget.coinType.secondaryColor,
-            Colors.white.withOpacity(0.3),
-          ],
-          stops: [0.3, 0.7, 1],
-          radius: 1.2,
-          center: const Alignment(0, 0),
-        );
-      case CoinDesignStyle.futuristic:
-        return RadialGradient(
-          colors: [
-            widget.coinType.primaryColor,
-            widget.coinType.secondaryColor,
-            Colors.white.withOpacity(0.5),
-          ],
-          stops: [0.2, 0.6, 1],
-          radius: 1.8,
-          center: const Alignment(0.6, 0.6),
-        );
-      case CoinDesignStyle.ancient:
-        return RadialGradient(
-          colors: [
-            widget.coinType.primaryColor.withOpacity(0.7),
-            widget.coinType.secondaryColor.withOpacity(0.9),
-            Colors.brown.withOpacity(0.4),
-          ],
-          radius: 1.3,
-          center: const Alignment(-0.2, -0.2),
-        );
-      case CoinDesignStyle.minimalist:
-        return RadialGradient(
-          colors: [
-            widget.coinType.primaryColor,
-            widget.coinType.primaryColor.withOpacity(0.7),
-            widget.coinType.primaryColor.withOpacity(0.4),
-          ],
-          radius: 1.0,
-          center: const Alignment(0, 0),
-        );
-      case CoinDesignStyle.ornate:
-        return RadialGradient(
-          colors: [
-            widget.coinType.primaryColor,
-            widget.coinType.secondaryColor,
-            Colors.white.withOpacity(0.4),
-          ],
-          stops: [0.3, 0.7, 1],
-          radius: 1.6,
-          center: const Alignment(-0.3, -0.3),
-        );
-    }
   }
 
   Widget _buildObverseSide() {
@@ -426,63 +315,67 @@ class _Coin3DState extends State<Coin3D> with SingleTickerProviderStateMixin {
   }
 }
 
-// Predefined Coin Types
 class CoinTypes {
   static List<CoinType> availableCoins = [
-    const CoinType(
+    CoinType(
       name: 'Bitcoin',
       primaryColor: Color(0xFFFFA726),
       secondaryColor: Color(0xFFFF9800),
+      tailPrimaryColor: Color(0xFF424242),
+      tailSecondaryColor: Color(0xFF212121),
       symbol: '₿',
       countryOfOrigin: 'Crypto Realm',
       rotationStyle: CoinRotationStyle.diagonal,
-      designStyle: CoinDesignStyle.futuristic,
     ),
-    const CoinType(
+    CoinType(
       name: 'Ethereum',
       primaryColor: Color(0xFF42A5F5),
       secondaryColor: Color(0xFF2196F3),
+      tailPrimaryColor: Color(0xFFE0E0E0),
+      tailSecondaryColor: Color(0xFFF5F5F5),
       symbol: 'Ξ',
       countryOfOrigin: 'Blockchain Nation',
       rotationStyle: CoinRotationStyle.verticalWave,
-      designStyle: CoinDesignStyle.modern,
     ),
-    const CoinType(
+    CoinType(
       name: 'Litecoin',
       primaryColor: Color(0xFFA0A0A0),
       secondaryColor: Color(0xFF707070),
+      tailPrimaryColor: Color(0xFFFFFFFF),
+      tailSecondaryColor: Color(0xFFF0F0F0),
       symbol: 'Ł',
       countryOfOrigin: 'Digital Territory',
       rotationStyle: CoinRotationStyle.horizontalWave,
-      designStyle: CoinDesignStyle.minimalist,
     ),
-    const CoinType(
+    CoinType(
       name: 'Cardano',
       primaryColor: Color(0xFF3C3C3D),
       secondaryColor: Color(0xFF212121),
+      tailPrimaryColor: Color(0xFFF5F5F5),
+      tailSecondaryColor: Color(0xFFE0E0E0),
       symbol: '₳',
       countryOfOrigin: 'Smart Contract State',
       rotationStyle: CoinRotationStyle.elliptical,
-      designStyle: CoinDesignStyle.minimalist,
     ),
-  
-    const CoinType(
+    CoinType(
       name: 'Ripple',
       primaryColor: Color(0xFF4CAF50),
       secondaryColor: Color(0xFF388E3C),
+      tailPrimaryColor: Color(0xFFFFFFFF),
+      tailSecondaryColor: Color(0xFFF0F0F0),
       symbol: '✕',
       countryOfOrigin: 'Global Transfer Empire',
       rotationStyle: CoinRotationStyle.diagonal,
-      designStyle: CoinDesignStyle.ancient,
     ),
-    const CoinType(
+    CoinType(
       name: 'Default',
       primaryColor: Color(0xFF9C27B0),
       secondaryColor: Color(0xFF7B1FA2),
+      tailPrimaryColor: Color(0xFFE0E0E0),
+      tailSecondaryColor: Color(0xFFF5F5F5),
       symbol: '◎',
       countryOfOrigin: 'Coin Toss Kingdom',
       rotationStyle: CoinRotationStyle.zigzag,
-      designStyle: CoinDesignStyle.ornate,
     ),
   ];
 
